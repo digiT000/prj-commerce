@@ -1,0 +1,31 @@
+{
+    "name": "backend",
+    "version": "1.0.0",
+    "main": "index.js",
+    "scripts": {
+        "dev": "node --env-file=src/config/env/.env.local --watch --import tsx src/index.ts",
+        "start": "node dist/index.js",
+        "build": "tsc"
+    },
+    "keywords": [],
+    "author": "",
+    "license": "ISC",
+    "description": "",
+    "dependencies": {
+        "dotenv": "^17.2.3",
+        "express": "^5.1.0",
+        "pg": "^8.16.3",
+        "reflect-metadata": "^0.2.2",
+        "slugify": "^1.6.6",
+        "typeorm": "^0.3.27",
+        "uuid": "^13.0.0"
+    },
+    "devDependencies": {
+        "@tsconfig/node22": "^22.0.5",
+        "@types/express": "^5.0.5",
+        "@types/node": "^24.10.1",
+        "prettier": "^3.7.3",
+        "tsx": "^4.20.6",
+        "typescript": "^5.9.3"
+    }
+}
