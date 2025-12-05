@@ -8,7 +8,12 @@ export enum Status {
     DELETED = 'DELETED',
 }
 
-export enum TYPE_IMAGE_REQUEST {
+export enum StatusImage {
+    TEMPORARY = 'TEMPORARY',
+    ACTIVE = 'ACTIVE',
+}
+
+export enum TypeImageRequest {
     PRODUCTS = 'products',
     CATEGORIES = 'categories',
 }

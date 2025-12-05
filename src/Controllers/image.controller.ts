@@ -4,7 +4,7 @@ import { asyncHandler } from '../Utils/handlerWrapper'
 import cloudinary, { CLOUD_NAME } from '../config/cloudinary'
 import { ImageError } from '../Error/image.error'
 import { randomUUID } from 'crypto'
-import { TYPE_IMAGE_REQUEST } from '../types/custom'
+import { TypeImageRequest } from '../types/custom'
 
 export class ImageController {
     getImageSignature = asyncHandler(async (req: Request, res: Response) => {
@@ -16,10 +16,9 @@ export class ImageController {
 
         if (
             !type ||
-            ![
-                TYPE_IMAGE_REQUEST.CATEGORIES,
-                TYPE_IMAGE_REQUEST.PRODUCTS,
-            ].includes(type)
+            ![TypeImageRequest.CATEGORIES, TypeImageRequest.PRODUCTS].includes(
+                type
+            )
         ) {
             throw ImageError.InvalidTypeRequest()
         }

@@ -8,6 +8,7 @@ import {
     Entity,
     Index,
     ManyToOne,
+    OneToMany,
     PrimaryGeneratedColumn,
     Unique,
     UpdateDateColumn,
@@ -15,6 +16,7 @@ import {
 import slugify from 'slugify'
 import { Category } from './Category'
 import { Status } from '../types/custom'
+import { Image } from './Image'
 
 @Entity()
 @Unique(['slug'])
@@ -41,6 +43,9 @@ export class Product {
         eager: true,
     })
     categoryId: string
+
+    @OneToMany(() => Image, (image) => image.id)
+    images: Image[]
 
     @CreateDateColumn()
     createdAt: Date
