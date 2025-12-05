@@ -31,6 +31,8 @@ export class Product {
     @Column('decimal')
     price: number
 
+    images?: Image[]
+
     @Column({ type: 'varchar' })
     @Index()
     slug: string
@@ -43,9 +45,6 @@ export class Product {
         eager: true,
     })
     categoryId: string
-
-    @OneToMany(() => Image, (image) => image.id)
-    images: Image[]
 
     @CreateDateColumn()
     createdAt: Date

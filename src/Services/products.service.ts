@@ -3,6 +3,7 @@ import {
     CreateNewProductRequest,
     CreateNewProductResponse,
     GetProductsParamsRequest,
+    imageResponse,
     ProductByIdResponse,
     UpdateProductRequest,
 } from '../dtos/product.dto'
@@ -11,7 +12,8 @@ import { AppDataSource } from '../data-source'
 import { Product } from '../entity/Product'
 import { Category } from '../entity/Category'
 import { CategoryService } from './category.service'
-import { Status } from '../types/custom'
+import { Status, StatusImage, TypeImageRequest } from '../types/custom'
+import { Image } from '../entity/Image'
 
 export class ProductService {
     // Constructor
@@ -126,18 +128,36 @@ export class ProductService {
 
     async getProductsById(slug: string): Promise<ProductByIdResponse> {
         try {
-            const product = await this.productRepository.findOneBy({
-                slug: slug,
-            })
-            if (!product) {
-                throw ProductError.NotFound(slug)
-            }
+            const product = await this.productRepository
+                .createQueryBuilder('product')
+                .leftJoinAndMapMany(
+                    'product.images',
+                    Image,
+                    'image',
+                    'image.types = :imageType AND image.entityId = product.id AND image.status = :imageStatus',
+                    {}
+                )
+                .setParameters({
+                    imageType: TypeImageRequest.PRODUCTS, // Use enum, not string
+                    imageStatus: StatusImage.ACTIVE,
+                })
+                .where('product.slug = :slug', { slug })
+                .getOne()
+
+            if (!product) throw ProductError.NotFound(slug)
+
+            const images: imageResponse[] =
+                product.images?.map((img) => ({
+                    urlThumbnail: img.urlOriginal,
+                    urlWebp: img.urlOptimized,
+                })) || []
 
             const finalProduct: ProductByIdResponse = {
                 id: product.id,
                 name: product.name,
                 price: product.price,
                 slug: product.slug,
+                images,
             }
 
             return finalProduct
@@ -172,6 +192,7 @@ export class ProductService {
             name: newProduct.name,
             price: newProduct.price,
             slug: newProduct.slug,
+            id: newProduct.id,
         }
     }
 

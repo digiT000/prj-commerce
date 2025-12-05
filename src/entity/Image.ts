@@ -30,7 +30,7 @@ export class Image {
     @Column('text')
     urlMedium: string // w_500, f_auto, q_auto, Webp
 
-    @Column({ type: 'enum', enum: StatusImage, default: StatusImage.ACTIVE })
+    @Column({ type: 'enum', enum: StatusImage, default: StatusImage.TEMPORARY })
     status: StatusImage
 
     @DeleteDateColumn()

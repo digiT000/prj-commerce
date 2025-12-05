@@ -10,12 +10,15 @@ import fieldRequiredValidation from '../Utils/fieldRequiredValidation'
 import { OrderBy, SourceWeb, Status } from '../types/custom'
 import { asyncHandler } from '../Utils/handlerWrapper'
 import { AppError } from '../Error/app.error'
+import { ImageService } from '../Services/image.service'
 
 export class ProductController {
     productService: ProductService
+    imageService: ImageService
 
     constructor() {
         this.productService = new ProductService()
+        this.imageService = new ImageService()
     }
 
     getProducts = asyncHandler(async (req: Request, res: Response) => {
@@ -75,6 +78,8 @@ export class ProductController {
             'name',
             'price',
             'categoryId',
+            'imageIds',
+            'type',
         ]
         const missingFileds = fieldRequiredValidation(
             requiredFields,
@@ -88,7 +93,19 @@ export class ProductController {
             )
         }
 
+        // Validate Image Data
+        const imageIds = newProduct.imageIds
+        if (imageIds.length === 0) {
+            throw new ProductError('No images provided', 400)
+        }
+
+        await this.imageService.validatedImages(imageIds, newProduct.type)
+
         const product = await this.productService.createNewProduct(newProduct)
+
+        // Update Image Data
+        await this.imageService.linkImageToEntity(imageIds, product.id)
+
         res.status(201).json({
             status: 201,
             message: 'Product created',
