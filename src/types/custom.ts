@@ -7,3 +7,8 @@ export enum Status {
     DISABLE = 'DISABLED',
     DELETED = 'DELETED',
 }
+
+export enum TYPE_IMAGE_REQUEST {
+    PRODUCTS = 'products',
+    CATEGORIES = 'categories',
+}

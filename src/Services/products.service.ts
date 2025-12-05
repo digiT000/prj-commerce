@@ -26,23 +26,57 @@ export class ProductService {
 
     // GET PRODUCTS
     async getProducts(productsParams: GetProductsParamsRequest) {
-        const { categoryId, orderBy, limit = 10 } = productsParams
+        const {
+            categoryId,
+            orderBy,
+            limit = 10,
+            priceMin,
+            priceMax,
+            status,
+        } = productsParams
         const query = this.productRepository
             .createQueryBuilder('product')
             .orderBy('product.createdAt', orderBy)
 
         if (categoryId) {
-            query.where('product.categoryId = :categoryId')
+            query.where('product.categoryId = :categoryId', {
+                categoryId: categoryId,
+            })
+        }
+        if (priceMin && priceMax) {
+            query.where('product.price BETWEEN :priceMin AND :priceMax', {
+                priceMin: priceMin,
+                priceMax: priceMax,
+            })
+        }
+
+        if (priceMin) {
+            query.where('product.price >= :priceMin', {
+                priceMin: priceMin,
+            })
+        }
+
+        if (priceMax) {
+            query.where('product.price <= :priceMax', {
+                priceMax: priceMax,
+            })
         }
 
         try {
             if (productsParams.sourceWeb === 'INTERNAL') {
+                if (status) {
+                    query.andWhere('product.status = :status', {
+                        status: status,
+                    })
+                }
+
                 const { page = 1 } = productsParams
                 const skip = (page - 1) * limit
 
                 const [products, totalProducts] = await query
                     .skip(skip)
                     .take(limit)
+                    .withDeleted()
                     .getManyAndCount()
 
                 const totalPages = Math.ceil(totalProducts / limit)

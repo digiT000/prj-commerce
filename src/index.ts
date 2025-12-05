@@ -1,16 +1,21 @@
 import 'reflect-metadata'
 import './data-source'
 import express from 'express'
-import { categoryRouter, productRouter } from './Routers'
+import { categoryRouter, imageRouter, productRouter } from './Routers'
 import { handleSourceWebHeader } from './Middleware/headers.middleware'
+import { initCloudinary } from './config/cloudinary'
 
 const app = express()
 
 app.use(express.json())
 
+// Initiate cloudinary configuration
+initCloudinary()
+
 const apiRouter = express.Router()
 apiRouter.use('', productRouter)
 apiRouter.use('', categoryRouter)
+apiRouter.use('', imageRouter)
 
 app.use('/api', handleSourceWebHeader, apiRouter)
 

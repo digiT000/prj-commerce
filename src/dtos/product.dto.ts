@@ -1,5 +1,5 @@
 import { Product } from '../entity/Product'
-import { OrderBy, SourceWeb } from '../types/custom'
+import { OrderBy, SourceWeb, Status } from '../types/custom'
 
 export type ProductByIdResponse = Pick<
     Product,
@@ -23,6 +23,9 @@ export interface UpdateProductRequest extends Pick<
 
 export interface GetProductsParamsRequest {
     categoryId?: string
+    priceMin?: number
+    priceMax?: number
+    status?: Status
     page?: number
     limit?: number
     cursor?: string

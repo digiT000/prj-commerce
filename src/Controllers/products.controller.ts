@@ -7,7 +7,7 @@ import {
     UpdateProductRequest,
 } from '../dtos/product.dto'
 import fieldRequiredValidation from '../Utils/fieldRequiredValidation'
-import { OrderBy, SourceWeb } from '../types/custom'
+import { OrderBy, SourceWeb, Status } from '../types/custom'
 import { asyncHandler } from '../Utils/handlerWrapper'
 import { AppError } from '../Error/app.error'
 
@@ -22,6 +22,9 @@ export class ProductController {
         const sourceWeb = req.sourceWeb as SourceWeb
         const catagoryId = req.query.categoryId as string | undefined
         const orderBy = req.query.orderBy as OrderBy
+        const status = req.query.status as Status
+        const priceMin = req.query.min
+        const priceMax = req.query.max
 
         // INTERNAL SOURCE
         const page = req.query.page as number | undefined
@@ -37,6 +40,9 @@ export class ProductController {
             cursor,
             orderBy,
             sourceWeb,
+            priceMax: priceMax ? Number(priceMax) : undefined,
+            priceMin: priceMin ? Number(priceMin) : undefined,
+            status,
         }
         const response = await this.productService.getProducts(productParams)
         res.status(200).json({
