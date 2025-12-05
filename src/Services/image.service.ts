@@ -1,4 +1,4 @@
-import { In, QueryFailedError, Repository } from 'typeorm'
+import { In, IsNull, Not, QueryFailedError, Repository } from 'typeorm'
 import { Image } from '../entity/Image'
 import { AppDataSource } from '../data-source'
 import { SaveImagesRequest, SaveImagesResponse } from '../dtos/image.dto'
@@ -85,15 +85,39 @@ export class ImageService {
         entityId: string
     ): Promise<void> {
         try {
+            // TODO : Improve this query because its 2 queries in one go,Explore solution
+
+            // Step 1: Check if any images already have an entityId
+            const alreadyLinkedImages = await this.imageRepostiory.find({
+                where: {
+                    id: In(imageIds),
+                    entityId: Not(IsNull()), // Find images that already have entityId
+                },
+            })
+
+            if (alreadyLinkedImages.length > 0) {
+                const linkedIds = alreadyLinkedImages
+                    .map((img) => img.id)
+                    .join(', ')
+                throw new ImageError(
+                    `Images [${linkedIds}] are already linked to another entity and cannot be overridden`,
+                    400
+                )
+            }
+
             const result = await this.imageRepostiory
                 .createQueryBuilder('image')
                 .update(Image)
                 .set({ status: StatusImage.ACTIVE, entityId: entityId })
                 .where('image.id IN (:...imageIds)', { imageIds })
+                .andWhere('image.entityId IS NULL')
                 .execute()
 
             if (result.affected === 0) {
-                throw new ImageError('No images found to update', 400)
+                throw new ImageError(
+                    'No images were updated. All may already be linked to another entity',
+                    400
+                )
             }
 
             if (result.affected !== imageIds.length) {
