@@ -19,7 +19,7 @@ export class Image {
     entityId: string
 
     @Column({ type: 'enum', enum: TypeImageRequest })
-    types: TypeImageRequest
+    entityType: TypeImageRequest
 
     @Column('text')
     urlOriginal: string // file asli

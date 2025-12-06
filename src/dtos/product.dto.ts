@@ -7,7 +7,7 @@ export interface imageResponse {
     urlThumbnail: string
 }
 
-export interface ProductByIdResponse extends Pick<
+export interface GetProductReponse extends Pick<
     Product,
     'id' | 'name' | 'price' | 'slug'
 > {
@@ -30,7 +30,9 @@ export interface CreateNewProductResponse extends Pick<
 export interface UpdateProductRequest extends Pick<
     Product,
     'name' | 'categoryId' | 'price'
-> {}
+> {
+    imageIds: string[]
+}
 
 export interface GetProductsParamsRequest {
     categoryId?: string

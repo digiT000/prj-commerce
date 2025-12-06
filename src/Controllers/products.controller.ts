@@ -139,12 +139,14 @@ export class ProductController {
             price: data?.price,
             categoryId: data?.catagoryId,
             name: data?.name,
+            imageIds: data?.imageIds || [],
         }
 
         const requiredFields: (keyof UpdateProductRequest)[] = [
             'name',
             'price',
             'categoryId',
+            'imageIds',
         ]
         const missingFileds = fieldRequiredValidation(requiredFields, updated)
 

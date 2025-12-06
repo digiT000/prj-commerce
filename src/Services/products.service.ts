@@ -1,29 +1,35 @@
-import { Repository, QueryFailedError } from 'typeorm'
+import { Repository, QueryFailedError, In, IsNull, Not } from 'typeorm'
 import {
     CreateNewProductRequest,
     CreateNewProductResponse,
+    GetProductReponse,
     GetProductsParamsRequest,
     imageResponse,
-    ProductByIdResponse,
     UpdateProductRequest,
 } from '../dtos/product.dto'
 import { ProductError } from '../Error/products.error'
 import { AppDataSource } from '../data-source'
 import { Product } from '../entity/Product'
-import { Category } from '../entity/Category'
+
 import { CategoryService } from './category.service'
 import { Status, StatusImage, TypeImageRequest } from '../types/custom'
 import { Image } from '../entity/Image'
+import { ImageError } from '../Error/image.error'
+import { ImageService } from './image.service'
 
 export class ProductService {
     // Constructor
     // Access DB
-    productRepository: Repository<Product>
-    categoryService: CategoryService
+    private productRepository: Repository<Product>
+    private imageRepositoy: Repository<Image>
+    private categoryService: CategoryService
+    private imageService: ImageService
 
     constructor() {
         this.productRepository = AppDataSource.getRepository(Product)
+        this.imageRepositoy = AppDataSource.getRepository(Image)
         this.categoryService = new CategoryService()
+        this.imageService = new ImageService()
     }
 
     // GET PRODUCTS
@@ -38,6 +44,17 @@ export class ProductService {
         } = productsParams
         const query = this.productRepository
             .createQueryBuilder('product')
+            .leftJoinAndMapMany(
+                'product.images',
+                Image,
+                'image',
+                'image.types = :imageType AND image.entityId = product.id AND image.status = :imageStatus',
+                {}
+            )
+            .setParameters({
+                imageType: TypeImageRequest.PRODUCTS,
+                imageStatus: StatusImage.ACTIVE,
+            })
             .orderBy('product.createdAt', orderBy)
 
         if (categoryId) {
@@ -82,9 +99,10 @@ export class ProductService {
                     .getManyAndCount()
 
                 const totalPages = Math.ceil(totalProducts / limit)
+                const mappedProduct = this.mappedProductResponse(products)
 
                 return {
-                    products,
+                    products: mappedProduct,
                     totalProducts,
                     totalPages,
                     currentPage: page,
@@ -109,12 +127,14 @@ export class ProductService {
 
                 const items = hasNextPage ? products.slice(0, limit) : products
 
+                const mappedProductResponse = this.mappedProductResponse(items)
+
                 const nextCursor = hasNextPage
                     ? `${items[items.length - 1].createdAt.toISOString()}_${items[items.length - 1].id}`
                     : null
 
                 return {
-                    products: items,
+                    products: mappedProductResponse,
                     nextCursor,
                     hasNextPage,
                 }
@@ -126,7 +146,35 @@ export class ProductService {
         }
     }
 
-    async getProductsById(slug: string): Promise<ProductByIdResponse> {
+    mappedProductResponse(items: Product[]): GetProductReponse[] {
+        return items.map((item) => {
+            const images =
+                item.images?.map((img) => ({
+                    urlThumbnail: img.urlOriginal,
+                    urlWebp: img.urlOptimized,
+                })) || []
+            return {
+                id: item.id,
+                name: item.name,
+                price: item.price,
+                slug: item.slug,
+                images,
+            }
+        })
+    }
+
+    mappedImageReponse(images: Image[]): imageResponse[] {
+        if (images.length === 0) return []
+
+        const newImages =
+            images?.map((img) => ({
+                urlThumbnail: img.urlOriginal,
+                urlWebp: img.urlOptimized,
+            })) || []
+        return newImages
+    }
+
+    async getProductsById(slug: string): Promise<GetProductReponse> {
         try {
             const product = await this.productRepository
                 .createQueryBuilder('product')
@@ -134,7 +182,7 @@ export class ProductService {
                     'product.images',
                     Image,
                     'image',
-                    'image.types = :imageType AND image.entityId = product.id AND image.status = :imageStatus',
+                    'image.entityType = :imageType AND image.entityId = product.id AND image.status = :imageStatus',
                     {}
                 )
                 .setParameters({
@@ -146,13 +194,9 @@ export class ProductService {
 
             if (!product) throw ProductError.NotFound(slug)
 
-            const images: imageResponse[] =
-                product.images?.map((img) => ({
-                    urlThumbnail: img.urlOriginal,
-                    urlWebp: img.urlOptimized,
-                })) || []
+            const images = this.mappedImageReponse(product?.images || [])
 
-            const finalProduct: ProductByIdResponse = {
+            const finalProduct: GetProductReponse = {
                 id: product.id,
                 name: product.name,
                 price: product.price,
@@ -197,15 +241,35 @@ export class ProductService {
     }
 
     async deleteProduct(productId: string) {
-        const deleted = await this.productRepository.softDelete(productId)
-        await this.productRepository.update(productId, {
-            status: Status.DELETED,
-        })
+        try {
+            return await AppDataSource.transaction(async (manager) => {
+                const product = await manager.findOne(Product, {
+                    where: {
+                        id: productId,
+                    },
+                })
+                if (!product) {
+                    throw ProductError.NotFound(productId)
+                }
 
-        if (!deleted.affected) {
-            throw ProductError.NotFound(productId)
+                await manager.softDelete(Product, { id: productId })
+                await manager.update(
+                    Product,
+                    { id: productId },
+                    {
+                        status: Status.DELETED,
+                    }
+                )
+                await manager.softDelete(Image, {
+                    entityType: 'products',
+                    entityId: productId,
+                })
+
+                return { id: productId, deleted: true }
+            })
+        } catch (error) {
+            throw error
         }
-        return productId
     }
 
     async updateProduct(productId: string, updateData: UpdateProductRequest) {
@@ -229,8 +293,85 @@ export class ProductService {
             product.price = updateData.price
         }
 
+        const queryRunner = AppDataSource.createQueryRunner()
         try {
-            const updatedProduct = await this.productRepository.save(product)
+            await queryRunner.connect()
+            await queryRunner.startTransaction()
+
+            // 1. Save Data Products
+            const updatedProduct = await queryRunner.manager.save(product)
+
+            // 2. Update Data  Image
+            // 2.1 Check image that not yet has an entityId
+            // 2.2 if all image is has entityId and equal to productId skipp the image process
+            // 2.2.If some image not yet has entityId,  Filter image that not yet has id and store the image to variable
+            // 2.3 link image to entity
+            // 2.4 delete all image the related to the entityId other than
+
+            const imageIds = updateData.imageIds
+            let updatedImages
+
+            if (imageIds.length > 0) {
+                const listImages = await queryRunner.manager.find(Image, {
+                    where: {
+                        id: In(imageIds),
+                    },
+                })
+
+                if (listImages.length !== imageIds.length) {
+                    throw new ProductError(
+                        `Expected ${imageIds.length} images, but found ${listImages.length}`,
+                        400
+                    )
+                }
+
+                const imageWithDifferentEntityId = listImages.filter(
+                    (img) => img.entityId !== productId && img.entityId !== null
+                )
+
+                if (imageWithDifferentEntityId.length > 0) {
+                    throw new ProductError(
+                        `Image you submit is already use by other products. ImageIds : ${imageWithDifferentEntityId}`
+                    )
+                }
+
+                const imagesToLink = listImages.filter((img) => !img.entityId)
+                if (imagesToLink.length > 0) {
+                    const imageIdsToLink = imagesToLink.map((img) => img.id)
+                    updatedImages = await this.imageService.linkImageToEntity(
+                        imageIdsToLink,
+                        productId,
+                        queryRunner.manager
+                    )
+
+                    if (updatedImages.affected === 0) {
+                        throw new ImageError(
+                            'No images were updated. All may already be linked to another entity',
+                            400
+                        )
+                    }
+
+                    if (updatedImages.affected !== imageIdsToLink.length) {
+                        throw new ImageError(
+                            `Expected to update ${imageIds.length} images, but updated ${updatedImages.affected}`,
+                            400
+                        )
+                    }
+
+                    await queryRunner.manager
+                        .createQueryBuilder(Image, 'image')
+                        .softDelete()
+                        .where('"image"."entityId" = :entityId', {
+                            entityId: productId,
+                        })
+                        .andWhere('"image"."id" NOT IN (:...imageIds)', {
+                            imageIds,
+                        })
+                        .execute()
+                }
+            }
+
+            await queryRunner.commitTransaction()
 
             return {
                 id: updatedProduct.id,
@@ -239,13 +380,21 @@ export class ProductService {
                 slug: updatedProduct.slug,
             }
         } catch (error) {
+            await queryRunner.rollbackTransaction()
+            if (error instanceof ProductError) {
+                throw error
+            }
+
             if (error instanceof QueryFailedError) {
                 const pgError = error.driverError
                 if (pgError.code === '23503') {
                     throw ProductError.CategoryNotExist()
                 }
             }
-            throw error
+
+            throw new ProductError('Failed to update product', 500)
+        } finally {
+            await queryRunner.release()
         }
     }
 }
