@@ -6,11 +6,14 @@ export interface ImageRequest extends Pick<
     'publicId' | 'urlMedium' | 'urlOptimized' | 'urlOriginal'
 > {}
 
+export interface ImageResponse {
+    urlWebp: string
+    urlThumbnail: string
+}
+
 export interface SaveImagesRequest {
     type: TypeImageRequest
     images: ImageRequest[]
 }
 
-export interface SaveImagesResponse {
-    imageIds: string[]
-}
+export type SaveImageResponse = string[]

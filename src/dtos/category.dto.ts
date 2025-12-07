@@ -1,9 +1,17 @@
 import { Category } from '../entity/Category'
+import { Product } from '../entity/Product'
 
 export interface CreateNewCategoryRequest extends Pick<Category, 'name'> {}
 
-interface Meta {
-    total: number
+export interface MetaDataCategory {
+    totalProducts: number
+}
+
+export interface CategoryResponse extends Pick<
+    Category,
+    'id' | 'slug' | 'products' | 'name'
+> {
+    totalProduct: number
 }
 
 export interface GetCategoryParamsRequest {
@@ -11,16 +19,17 @@ export interface GetCategoryParamsRequest {
     limit?: number
 }
 
-export interface CategoryWithMeta {
-    id: string
-    name: string
-    slug: string
-    totalProducts: number
+export interface CategoryWithMetaResponse extends Pick<
+    Category,
+    'id' | 'name' | 'slug'
+> {
+    products?: Product[]
+    metadata: MetaDataCategory
 }
 
 export interface GetCategoryResponse {
-    data: CategoryWithMeta[]
-    meta: {
+    data: CategoryWithMetaResponse[]
+    metadata: {
         totalCategories: number
         totalPages: number
         currentPage: number

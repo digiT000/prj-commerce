@@ -8,11 +8,10 @@ import {
 } from 'typeorm'
 import { Image } from '../entity/Image'
 import { AppDataSource } from '../data-source'
-import { SaveImagesRequest } from '../dtos/image.dto'
+import { SaveImageResponse, SaveImagesRequest } from '../dtos/image.dto'
 import { ImageError } from '../Error/image.error'
 import { StatusImage, TypeImageRequest } from '../types/custom'
 import { SelectQueryBuilder } from 'typeorm/browser'
-import { DeleteQueryBuilder } from 'typeorm/browser'
 
 export class ImageService {
     private imageRepository: Repository<Image>
@@ -21,7 +20,10 @@ export class ImageService {
         this.imageRepository = AppDataSource.getRepository(Image)
     }
 
-    async saveImages({ images, type }: SaveImagesRequest): Promise<string[]> {
+    async saveImages({
+        images,
+        type,
+    }: SaveImagesRequest): Promise<SaveImageResponse> {
         const imageToInsert = images.map((img) => ({
             publicId: img.publicId,
             urlOriginal: img.urlOriginal,
@@ -45,7 +47,10 @@ export class ImageService {
         }
     }
 
-    async validatedImages(imagesIds: string[], type: TypeImageRequest) {
+    async validatedImages(
+        imagesIds: string[],
+        type: TypeImageRequest
+    ): Promise<Image[]> {
         try {
             const images = await this.imageRepository.find({
                 where: {
@@ -180,7 +185,7 @@ export class ImageService {
         id: string, // imageId or entityId
         entityTypeRequest?: TypeImageRequest,
         manager?: EntityManager
-    ) {
+    ): Promise<void> {
         try {
             if (!id) {
                 throw new ImageError('ID (entityId/imageId) is required', 400)

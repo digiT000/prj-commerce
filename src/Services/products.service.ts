@@ -2,9 +2,10 @@ import { Repository, QueryFailedError, In, IsNull, Not } from 'typeorm'
 import {
     CreateNewProductRequest,
     CreateNewProductResponse,
-    GetProductReponse,
+    DeleteProductResponse,
     GetProductsParamsRequest,
-    imageResponse,
+    GetProductsResponse,
+    ProductResponse,
     UpdateProductRequest,
 } from '../dtos/product.dto'
 import { ProductError } from '../Error/products.error'
@@ -16,6 +17,8 @@ import { Status, StatusImage, TypeImageRequest } from '../types/custom'
 import { Image } from '../entity/Image'
 import { ImageError } from '../Error/image.error'
 import { ImageService } from './image.service'
+import { mappedImageReponse } from '../Utils/mappedImageResponse'
+import { mappedProductResponse } from '../Utils/mappedProductResponse'
 
 export class ProductService {
     // Constructor
@@ -33,7 +36,9 @@ export class ProductService {
     }
 
     // GET PRODUCTS
-    async getProducts(productsParams: GetProductsParamsRequest) {
+    async getProducts(
+        productsParams: GetProductsParamsRequest
+    ): Promise<GetProductsResponse> {
         const {
             categoryId,
             orderBy,
@@ -99,7 +104,7 @@ export class ProductService {
                     .getManyAndCount()
 
                 const totalPages = Math.ceil(totalProducts / limit)
-                const mappedProduct = this.mappedProductResponse(products)
+                const mappedProduct = mappedProductResponse(products)
 
                 return {
                     products: mappedProduct,
@@ -127,14 +132,14 @@ export class ProductService {
 
                 const items = hasNextPage ? products.slice(0, limit) : products
 
-                const mappedProductResponse = this.mappedProductResponse(items)
+                const finalProduct = mappedProductResponse(items)
 
                 const nextCursor = hasNextPage
                     ? `${items[items.length - 1].createdAt.toISOString()}_${items[items.length - 1].id}`
                     : null
 
                 return {
-                    products: mappedProductResponse,
+                    products: finalProduct,
                     nextCursor,
                     hasNextPage,
                 }
@@ -146,35 +151,7 @@ export class ProductService {
         }
     }
 
-    mappedProductResponse(items: Product[]): GetProductReponse[] {
-        return items.map((item) => {
-            const images =
-                item.images?.map((img) => ({
-                    urlThumbnail: img.urlOriginal,
-                    urlWebp: img.urlOptimized,
-                })) || []
-            return {
-                id: item.id,
-                name: item.name,
-                price: item.price,
-                slug: item.slug,
-                images,
-            }
-        })
-    }
-
-    mappedImageReponse(images: Image[]): imageResponse[] {
-        if (images.length === 0) return []
-
-        const newImages =
-            images?.map((img) => ({
-                urlThumbnail: img.urlOriginal,
-                urlWebp: img.urlOptimized,
-            })) || []
-        return newImages
-    }
-
-    async getProductsById(slug: string): Promise<GetProductReponse> {
+    async getProductsById(slug: string): Promise<ProductResponse> {
         try {
             const product = await this.productRepository
                 .createQueryBuilder('product')
@@ -194,9 +171,9 @@ export class ProductService {
 
             if (!product) throw ProductError.NotFound(slug)
 
-            const images = this.mappedImageReponse(product?.images || [])
+            const images = mappedImageReponse(product?.images || [])
 
-            const finalProduct: GetProductReponse = {
+            const finalProduct: ProductResponse = {
                 id: product.id,
                 name: product.name,
                 price: product.price,
@@ -240,7 +217,7 @@ export class ProductService {
         }
     }
 
-    async deleteProduct(productId: string) {
+    async deleteProduct(productId: string): Promise<DeleteProductResponse> {
         try {
             return await AppDataSource.transaction(async (manager) => {
                 const product = await manager.findOne(Product, {
@@ -272,7 +249,10 @@ export class ProductService {
         }
     }
 
-    async updateProduct(productId: string, updateData: UpdateProductRequest) {
+    async updateProduct(
+        productId: string,
+        updateData: UpdateProductRequest
+    ): Promise<ProductResponse> {
         const product = await this.productRepository.findOne({
             where: { id: productId },
         })
@@ -298,15 +278,7 @@ export class ProductService {
             await queryRunner.connect()
             await queryRunner.startTransaction()
 
-            // 1. Save Data Products
             const updatedProduct = await queryRunner.manager.save(product)
-
-            // 2. Update Data  Image
-            // 2.1 Check image that not yet has an entityId
-            // 2.2 if all image is has entityId and equal to productId skipp the image process
-            // 2.2.If some image not yet has entityId,  Filter image that not yet has id and store the image to variable
-            // 2.3 link image to entity
-            // 2.4 delete all image the related to the entityId other than
 
             const imageIds = updateData.imageIds
             let updatedImages
@@ -324,6 +296,7 @@ export class ProductService {
                         400
                     )
                 }
+                updatedImages = mappedImageReponse(listImages)
 
                 const imageWithDifferentEntityId = listImages.filter(
                     (img) => img.entityId !== productId && img.entityId !== null
@@ -338,22 +311,23 @@ export class ProductService {
                 const imagesToLink = listImages.filter((img) => !img.entityId)
                 if (imagesToLink.length > 0) {
                     const imageIdsToLink = imagesToLink.map((img) => img.id)
-                    updatedImages = await this.imageService.linkImageToEntity(
-                        imageIdsToLink,
-                        productId,
-                        queryRunner.manager
-                    )
+                    const linkedImages =
+                        await this.imageService.linkImageToEntity(
+                            imageIdsToLink,
+                            productId,
+                            queryRunner.manager
+                        )
 
-                    if (updatedImages.affected === 0) {
+                    if (linkedImages.affected === 0) {
                         throw new ImageError(
                             'No images were updated. All may already be linked to another entity',
                             400
                         )
                     }
 
-                    if (updatedImages.affected !== imageIdsToLink.length) {
+                    if (linkedImages.affected !== imageIdsToLink.length) {
                         throw new ImageError(
-                            `Expected to update ${imageIds.length} images, but updated ${updatedImages.affected}`,
+                            `Expected to update ${imageIds.length} images, but updated ${linkedImages.affected}`,
                             400
                         )
                     }
@@ -378,6 +352,7 @@ export class ProductService {
                 name: updatedProduct.name,
                 price: updatedProduct.price,
                 slug: updatedProduct.slug,
+                images: updatedImages || [],
             }
         } catch (error) {
             await queryRunner.rollbackTransaction()

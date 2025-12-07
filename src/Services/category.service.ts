@@ -2,7 +2,7 @@ import { Repository, QueryFailedError } from 'typeorm'
 import { Category } from '../entity/Category'
 import { AppDataSource } from '../data-source'
 import {
-    CategoryWithMeta,
+    CategoryWithMetaResponse,
     CreateNewCategoryRequest,
     GetCategoryParamsRequest,
     GetCategoryResponse,
@@ -10,7 +10,6 @@ import {
 } from '../dtos/category.dto'
 import { CategoryError } from '../Error/category.error'
 import { Product } from '../entity/Product'
-import { UpdateResult } from 'typeorm/browser'
 import { Status } from '../types/custom'
 
 export class CategoryService {
@@ -22,9 +21,10 @@ export class CategoryService {
         this.productRepository = AppDataSource.getRepository(Product)
     }
 
-    async createNewCategory(newCategory: CreateNewCategoryRequest) {
+    async createNewCategory(
+        newCategory: CreateNewCategoryRequest
+    ): Promise<Category> {
         const { name } = newCategory
-        console.log(name)
 
         try {
             const category = this.categoryRepository.create({
@@ -32,7 +32,7 @@ export class CategoryService {
             })
             await this.categoryRepository.save(category)
 
-            return true
+            return category
         } catch (error) {
             if (error instanceof QueryFailedError) {
                 const pgError = error.driverError
@@ -64,7 +64,7 @@ export class CategoryService {
         if (totalCategories === 0) {
             return {
                 data: [],
-                meta: {
+                metadata: {
                     totalCategories: totalCategories,
                     currentPage: page,
                     hasNextPage: totalPages > page,
@@ -93,18 +93,20 @@ export class CategoryService {
         })
 
         // Step 4: Build response with product counts
-        const categoriesWithTotalProducts: CategoryWithMeta[] = categories.map(
-            (category) => ({
+        const categoriesWithTotalProducts: CategoryWithMetaResponse[] =
+            categories.map((category) => ({
                 id: category.id,
                 name: category.name,
                 slug: category.slug,
-                totalProducts: countMap.get(category.id) || 0,
-            })
-        )
+
+                metadata: {
+                    totalProducts: countMap.get(category.id) || 0,
+                },
+            }))
 
         return {
             data: categoriesWithTotalProducts,
-            meta: {
+            metadata: {
                 totalCategories,
                 currentPage: page,
                 totalPages,
@@ -114,7 +116,9 @@ export class CategoryService {
         }
     }
 
-    async getCategoryById(categoryId: string) {
+    async getCategoryById(
+        categoryId: string
+    ): Promise<CategoryWithMetaResponse> {
         try {
             const category = await this.categoryRepository.findOne({
                 where: {
@@ -135,9 +139,8 @@ export class CategoryService {
                 name: category.name,
                 slug: category.slug,
                 products: category.products,
-                status: category.status,
-                meta: {
-                    totalProduct: totalProduct,
+                metadata: {
+                    totalProducts: totalProduct,
                 },
             }
         } catch (error) {

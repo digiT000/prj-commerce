@@ -1,17 +1,12 @@
-import { Image } from '../entity/Image'
 import { Product } from '../entity/Product'
 import { OrderBy, SourceWeb, Status, TypeImageRequest } from '../types/custom'
+import { ImageResponse } from './image.dto'
 
-export interface imageResponse {
-    urlWebp: string
-    urlThumbnail: string
-}
-
-export interface GetProductReponse extends Pick<
+export interface ProductResponse extends Pick<
     Product,
     'id' | 'name' | 'price' | 'slug'
 > {
-    images: imageResponse[]
+    images: ImageResponse[]
 }
 
 export interface CreateNewProductRequest extends Pick<
@@ -33,6 +28,10 @@ export interface UpdateProductRequest extends Pick<
 > {
     imageIds: string[]
 }
+export type DeleteProductResponse = {
+    id: string
+    deleted: boolean
+}
 
 export interface GetProductsParamsRequest {
     categoryId?: string
@@ -45,3 +44,22 @@ export interface GetProductsParamsRequest {
     sourceWeb: SourceWeb
     orderBy: OrderBy
 }
+
+export interface GetProductsPaginationResponse {
+    products: ProductResponse[]
+    totalProducts: number
+    totalPages: number
+    currentPage: number
+    hasNextPage: boolean
+    hasPreviousPage: boolean
+}
+
+export interface GetProductsCursorResponse {
+    products: ProductResponse[]
+    nextCursor: string | null
+    hasNextPage: boolean
+}
+
+export type GetProductsResponse =
+    | GetProductsPaginationResponse
+    | GetProductsCursorResponse
