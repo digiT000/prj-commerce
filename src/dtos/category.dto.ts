@@ -1,3 +1,4 @@
+import { Status } from 'cloudinary'
 import { Category } from '../entity/Category'
 import { Product } from '../entity/Product'
 
@@ -24,6 +25,7 @@ export interface CategoryWithMetaResponse extends Pick<
     'id' | 'name' | 'slug'
 > {
     products?: Product[]
+    status?: Status
     metadata: MetaDataCategory
 }
 

@@ -112,7 +112,7 @@ export class ProductService {
                     totalPages,
                     currentPage: page,
                     hasNextPage: page < totalPages,
-                    hasPreviosPage: page > totalPages,
+                    hasPreviousPage: page > totalPages,
                 }
             } else if (productsParams.sourceWeb === 'USER') {
                 const { cursor } = productsParams
