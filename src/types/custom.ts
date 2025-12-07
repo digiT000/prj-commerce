@@ -2,6 +2,12 @@ export const SOURCE_WEB = ['USER', 'INTERNAL']
 export type SourceWeb = (typeof SOURCE_WEB)[number]
 
 export type OrderBy = 'ASC' | 'DESC'
+
+export enum UserRole {
+    USER = 'USER',
+    ADMIN = 'ADMIN',
+}
+
 export enum Status {
     ACTIVE = 'ACTIVE',
     DISABLE = 'DISABLED',
