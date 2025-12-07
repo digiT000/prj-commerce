@@ -51,7 +51,7 @@ export class UserService {
                 TokenUtils.generatePairToken(payloadToken)
 
             user.refreshToken = refreshToken
-            await this.userRepository.update(user.email, {
+            await this.userRepository.update(user.id, {
                 refreshToken: refreshToken,
                 lastLoginAt: new Date(),
             })
