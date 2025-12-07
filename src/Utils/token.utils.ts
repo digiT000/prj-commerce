@@ -50,7 +50,7 @@ export class TokenUtils {
             if (err instanceof jwt.JsonWebTokenError) {
                 throw UserError.InvalidToken()
             } else if (err instanceof jwt.TokenExpiredError) {
-                throw UserError.InvalidToken()
+                throw UserError.TokenIsExpired()
             } else {
                 throw new UserError('Failed to verify token', 400)
             }

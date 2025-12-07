@@ -4,6 +4,7 @@ import { asyncHandler } from '../Utils/handlerWrapper'
 import { LoginRequest, RegisterRequest } from '../dtos/user.dto'
 import fieldRequiredValidation from '../Utils/fieldRequiredValidation'
 import { UserError } from '../Error/user.error'
+import { JwtPayload } from '../Utils/token.utils'
 
 export class UserController {
     private userService: UserService
@@ -66,5 +67,22 @@ export class UserController {
             message: 'Register Successfull',
             data: userRegister,
         })
+    })
+
+    logout = asyncHandler(async (req: Request, res: Response) => {
+        const user = req.user as JwtPayload
+
+        try {
+            if (!user) {
+                throw new UserError('user information is missing', 400)
+            }
+            await this.userService.logout(user.userId)
+            res.status(200).json({
+                status: 200,
+                message: 'Logout success',
+            })
+        } catch (error) {
+            throw error
+        }
     })
 }

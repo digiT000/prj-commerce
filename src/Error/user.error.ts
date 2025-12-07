@@ -44,12 +44,25 @@ export class UserError extends Error {
         return new UserError('Email is already used', 400)
     }
 
+    static NotFound(userId?: string) {
+        return new UserError(
+            userId
+                ? `We couldn't find a user with ID: ${userId}`
+                : 'User not found',
+            404
+        )
+    }
+
     // TOKEN
     static TokenNotProvided() {
         return new UserError('Please provide token', 401)
     }
 
     static InvalidToken() {
-        return new UserError('Your token has expired or is invalid', 401)
+        return new UserError('Your token is invalid', 401)
+    }
+
+    static TokenIsExpired() {
+        return new UserError('Your token has expired', 401)
     }
 }

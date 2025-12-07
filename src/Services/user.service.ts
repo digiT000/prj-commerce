@@ -107,7 +107,24 @@ export class UserService {
         }
     }
 
-    // Register
+    // Logout
+    async logout(userId: string) {
+        try {
+            const user = this.userRepository.findOneBy({
+                id: userId,
+            })
+
+            if (!user) {
+                throw UserError.NotFound(userId)
+            }
+
+            await this.userRepository.update(userId, {
+                refreshToken: null,
+            })
+        } catch (error) {
+            throw error
+        }
+    }
 
     // Verified Email
 
