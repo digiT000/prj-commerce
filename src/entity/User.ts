@@ -10,7 +10,6 @@ import {
 import { UserRole } from '../types/custom'
 
 @Entity()
-@Index(['email'])
 export class User {
     @PrimaryGeneratedColumn('uuid')
     id: string
@@ -23,7 +22,7 @@ export class User {
 
     @Column({ type: 'varchar', length: 255, unique: true })
     @Index()
-    email: boolean
+    email: string
 
     @Column({ type: 'boolean', default: false })
     hasVerifiedEmail: boolean
