@@ -1,5 +1,7 @@
+import { error } from 'console'
 import { UserRole } from '../types/custom'
 import jwt from 'jsonwebtoken'
+import { UserError } from '../Error/user.error'
 
 export interface JwtPayload {
     userId: string
@@ -37,5 +39,21 @@ export class TokenUtils {
         const refreshToken = this.generateRefreshToken(payload)
 
         return { accessToken, refreshToken }
+    }
+
+    static async validateAccessToken(token: string) {
+        try {
+            const decoded = jwt.verify(token, this.ACCESS_TOKEN_SECRET)
+            return decoded
+        } catch (err) {
+            console.log('Error Happen when validate', err)
+            if (err instanceof jwt.JsonWebTokenError) {
+                throw UserError.InvalidToken()
+            } else if (err instanceof jwt.TokenExpiredError) {
+                throw UserError.InvalidToken()
+            } else {
+                throw new UserError('Failed to verify token', 400)
+            }
+        }
     }
 }

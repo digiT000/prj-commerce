@@ -33,7 +33,23 @@ export class UserError extends Error {
         )
     }
 
+    static AdminOnly() {
+        return new UserError(
+            'This action is only available to administrators',
+            403
+        )
+    }
+
     static UserAlreadyExist() {
         return new UserError('Email is already used', 400)
+    }
+
+    // TOKEN
+    static TokenNotProvided() {
+        return new UserError('Please provide token', 401)
+    }
+
+    static InvalidToken() {
+        return new UserError('Your token has expired or is invalid', 401)
     }
 }
