@@ -1,6 +1,7 @@
 import { UserRole } from '../types/custom'
 import jwt from 'jsonwebtoken'
 import { UserError } from '../Error/user.error'
+import crypto from 'crypto'
 
 export interface JwtPayload {
     userId: string
@@ -27,15 +28,13 @@ export class TokenUtils {
     }
 
     // Generate refresh token
-    static generateRefreshToken(payload: JwtPayload): string {
-        return jwt.sign(payload, this.REFRESH_TOKEN_SECRET, {
-            expiresIn: '5d',
-        })
+    static generateRefreshToken(): string {
+        return crypto.randomBytes(64).toString('hex')
     }
 
     static generatePairToken(payload: JwtPayload): TokenPair {
         const accessToken = this.generateAccessToken(payload)
-        const refreshToken = this.generateRefreshToken(payload)
+        const refreshToken = this.generateRefreshToken()
 
         return { accessToken, refreshToken }
     }
