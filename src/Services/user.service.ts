@@ -1,4 +1,4 @@
-import { QueryFailedError, Repository } from 'typeorm'
+import { Repository } from 'typeorm'
 import { User } from '../entity/User'
 import { AppDataSource } from '../data-source'
 import bcyrpt from 'bcrypt'
@@ -17,56 +17,54 @@ export class UserService {
 
     // Login
     async login(loginRequest: LoginRequest): Promise<LoginResponse> {
-        try {
-            const user = await this.userRepository
-                .createQueryBuilder('user')
-                .where('user.email = :email', { email: loginRequest.email })
-                .addSelect('user.hashPassword') // ✅ Explicitly select hidden field
-                .getOne()
+        const user = await this.userRepository
+            .createQueryBuilder('user')
+            .where('user.email = :email', { email: loginRequest.email })
+            .addSelect('user.hashPassword') // ✅ Explicitly select hidden field
+            .getOne()
 
-            if (!user) {
-                throw UserError.EmailNotValid()
-            }
+        if (!user) {
+            throw UserError.EmailNotValid()
+        }
 
-            const isValidPassword = await bcyrpt.compare(
-                loginRequest.password,
-                user.hashPassword
-            )
+        const isValidPassword = await bcyrpt.compare(
+            loginRequest.password,
+            user.hashPassword
+        )
 
-            if (!isValidPassword) {
-                throw UserError.PasswordNotValid()
-            }
+        if (!isValidPassword) {
+            throw UserError.PasswordNotValid()
+        }
 
-            if (!user.hasVerifiedEmail) {
-                throw UserError.NotYetVerified()
-            }
+        if (!user.hasVerifiedEmail) {
+            throw UserError.NotYetVerified()
+        }
 
-            const payloadToken: JwtPayload = {
-                userId: user.id,
-                email: user.email,
-                role: user.role,
-            }
+        const payloadToken: JwtPayload = {
+            userId: user.id,
+            email: user.email,
+            role: user.role,
+        }
 
-            const { accessToken, refreshToken } =
-                TokenUtils.generatePairToken(payloadToken)
+        const { accessToken, refreshToken } =
+            TokenUtils.generatePairToken(payloadToken)
 
-            user.refreshToken = refreshToken
-            await this.userRepository.update(user.id, {
-                refreshToken: refreshToken,
-                lastLoginAt: new Date(),
-            })
-            return {
-                accessToken,
-                refreshToken,
-                email: user.email,
-                name: user.name,
-            }
-        } catch (error) {
-            throw error
+        user.refreshToken = refreshToken
+        await this.userRepository.update(user.id, {
+            refreshToken: refreshToken,
+            lastLoginAt: new Date(),
+        })
+        return {
+            accessToken,
+            refreshToken,
+            email: user.email,
+            name: user.name,
         }
     }
 
     async register(registerRequest: RegisterRequest) {
+        const queryRunner = AppDataSource.createQueryRunner()
+
         try {
             const { email, name, password } = registerRequest
 
@@ -78,52 +76,51 @@ export class UserService {
 
             const hashedPassword = await bcyrpt.hash(password, saltRounds)
 
+            await queryRunner.connect()
+            await queryRunner.startTransaction()
+
             // Save data to db
-            const newUser = this.userRepository.create({
+            queryRunner.manager.create(User, {
                 email,
                 name,
-
                 hashPassword: hashedPassword,
             })
 
-            await this.userRepository.insert(newUser)
+            await queryRunner.commitTransaction()
+
             return {
                 email,
                 name,
+                emailVerification: 'token-to-be-sent-via-email',
             }
         } catch (error) {
+            await queryRunner.rollbackTransaction()
             throw error
+        } finally {
+            queryRunner.release()
         }
     }
 
     async getUserData(email: string) {
-        try {
-            const user = await this.userRepository.findOneBy({
-                email: email,
-            })
-            return user
-        } catch (error) {
-            throw error
-        }
+        const user = await this.userRepository.findOneBy({
+            email: email,
+        })
+        return user
     }
 
     // Logout
     async logout(userId: string) {
-        try {
-            const user = this.userRepository.findOneBy({
-                id: userId,
-            })
+        const user = this.userRepository.findOneBy({
+            id: userId,
+        })
 
-            if (!user) {
-                throw UserError.NotFound(userId)
-            }
-
-            await this.userRepository.update(userId, {
-                refreshToken: null,
-            })
-        } catch (error) {
-            throw error
+        if (!user) {
+            throw UserError.NotFound(userId)
         }
+
+        await this.userRepository.update(userId, {
+            refreshToken: null,
+        })
     }
 
     // Verified Email

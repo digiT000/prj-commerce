@@ -2,7 +2,7 @@ import { Status } from 'cloudinary'
 import { Category } from '../entity/Category'
 import { Product } from '../entity/Product'
 
-export interface CreateNewCategoryRequest extends Pick<Category, 'name'> {}
+export type CreateNewCategoryRequest = Pick<Category, 'name'>
 
 export interface MetaDataCategory {
     totalProducts: number
@@ -40,4 +40,4 @@ export interface GetCategoryResponse {
     }
 }
 
-export interface UpdateCategoryRequest extends Pick<Category, 'name'> {}
+export type UpdateCategoryRequest = Pick<Category, 'name'>

@@ -1,6 +1,6 @@
 export default function fieldRequiredValidation(
     requiredFields: string[],
-    data: any
+    data: Record<string, unknown>
 ) {
     const missingFileds = []
     for (const field of requiredFields) {

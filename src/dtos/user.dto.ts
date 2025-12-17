@@ -1,5 +1,3 @@
-import { User } from '../entity/User'
-
 export type LoginRequest = {
     email: string
     password: string

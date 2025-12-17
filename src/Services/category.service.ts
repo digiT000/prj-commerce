@@ -119,49 +119,41 @@ export class CategoryService {
     async getCategoryById(
         categoryId: string
     ): Promise<CategoryWithMetaResponse> {
-        try {
-            const category = await this.categoryRepository.findOne({
-                where: {
-                    id: categoryId,
-                },
-                withDeleted: true,
-            })
-            if (!category) {
-                throw CategoryError.NotFound(categoryId)
-            }
+        const category = await this.categoryRepository.findOne({
+            where: {
+                id: categoryId,
+            },
+            withDeleted: true,
+        })
+        if (!category) {
+            throw CategoryError.NotFound(categoryId)
+        }
 
-            const totalProduct = await this.productRepository.count({
-                where: { categoryId: categoryId },
-            })
+        const totalProduct = await this.productRepository.count({
+            where: { categoryId: categoryId },
+        })
 
-            return {
-                id: category.id,
-                name: category.name,
-                slug: category.slug,
-                products: category.products,
-                metadata: {
-                    totalProducts: totalProduct,
-                },
-            }
-        } catch (error) {
-            throw error
+        return {
+            id: category.id,
+            name: category.name,
+            slug: category.slug,
+            products: category.products,
+            metadata: {
+                totalProducts: totalProduct,
+            },
         }
     }
 
     async deleteCategory(categoryId: string) {
-        try {
-            const deleted = await this.categoryRepository.softDelete(categoryId)
-            await this.categoryRepository.update(categoryId, {
-                status: Status.DELETED,
-            })
+        const deleted = await this.categoryRepository.softDelete(categoryId)
+        await this.categoryRepository.update(categoryId, {
+            status: Status.DELETED,
+        })
 
-            if (!deleted.affected) {
-                throw CategoryError.NotFound(categoryId)
-            }
-            return categoryId
-        } catch (error) {
-            throw error
+        if (!deleted.affected) {
+            throw CategoryError.NotFound(categoryId)
         }
+        return categoryId
     }
 
     async updateCategory(categoryId: string, params: UpdateCategoryRequest) {

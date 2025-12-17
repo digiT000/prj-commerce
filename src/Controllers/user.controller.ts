@@ -13,8 +13,6 @@ export class UserController {
         this.userService = new UserService()
     }
 
-    // Login
-
     login = asyncHandler(async (req: Request, res: Response) => {
         const loginData = req.body
 
@@ -60,7 +58,6 @@ export class UserController {
         }
 
         const userRegister = await this.userService.register(registerData)
-        console.log(userRegister)
 
         res.status(201).json({
             status: 201,
@@ -72,17 +69,13 @@ export class UserController {
     logout = asyncHandler(async (req: Request, res: Response) => {
         const user = req.user as JwtPayload
 
-        try {
-            if (!user) {
-                throw new UserError('user information is missing', 400)
-            }
-            await this.userService.logout(user.userId)
-            res.status(200).json({
-                status: 200,
-                message: 'Logout success',
-            })
-        } catch (error) {
-            throw error
+        if (!user) {
+            throw new UserError('user information is missing', 400)
         }
+        await this.userService.logout(user.userId)
+        res.status(200).json({
+            status: 200,
+            message: 'Logout success',
+        })
     })
 }

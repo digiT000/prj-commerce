@@ -1,4 +1,4 @@
-import { Request, Response, NextFunction } from 'express'
+import { Request, Response } from 'express'
 import { ProductError } from '../Error/products.error'
 import { CategoryError } from '../Error/category.error'
 import { QueryFailedError } from 'typeorm'
@@ -6,12 +6,7 @@ import { AppError } from '../Error/app.error'
 import { UserError } from '../Error/user.error'
 import { ImageError } from '../Error/image.error'
 
-export function errorHandle(
-    error: Error,
-    _req: Request,
-    res: Response,
-    _next: NextFunction
-) {
+export function errorHandle(error: Error, _req: Request, res: Response) {
     console.error('Error:', error)
 
     if (

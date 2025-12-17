@@ -1,4 +1,3 @@
-import { error } from 'console'
 import { UserRole } from '../types/custom'
 import jwt from 'jsonwebtoken'
 import { UserError } from '../Error/user.error'

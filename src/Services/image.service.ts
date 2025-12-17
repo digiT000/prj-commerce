@@ -279,18 +279,14 @@ export class ImageService {
         type: TypeImageRequest.CATEGORIES | TypeImageRequest.PRODUCTS,
         entityId: string
     ) {
-        try {
-            const deleteResult = await fn
-                .softDelete()
-                .where('"image"."entityId" = :entityId', { entityId })
-                .andWhere('"image"."entityType" = :entityType', {
-                    entityType: type,
-                })
-                .execute()
+        const deleteResult = await fn
+            .softDelete()
+            .where('"image"."entityId" = :entityId', { entityId })
+            .andWhere('"image"."entityType" = :entityType', {
+                entityType: type,
+            })
+            .execute()
 
-            return deleteResult
-        } catch (error) {
-            throw error
-        }
+        return deleteResult
     }
 }

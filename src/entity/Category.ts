@@ -1,6 +1,5 @@
 import slugify from 'slugify'
 import {
-    AfterInsert,
     BeforeInsert,
     BeforeUpdate,
     Column,
@@ -10,7 +9,6 @@ import {
     Index,
     OneToMany,
     PrimaryGeneratedColumn,
-    Unique,
     UpdateDateColumn,
 } from 'typeorm'
 import { Product } from './Product'

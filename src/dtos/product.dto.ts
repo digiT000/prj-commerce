@@ -17,10 +17,10 @@ export interface CreateNewProductRequest extends Pick<
     type: TypeImageRequest
 }
 
-export interface CreateNewProductResponse extends Pick<
+export type CreateNewProductResponse = Pick<
     Product,
     'name' | 'price' | 'slug' | 'id'
-> {}
+>
 
 export interface UpdateProductRequest extends Pick<
     Product,

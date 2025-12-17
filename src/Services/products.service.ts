@@ -1,4 +1,4 @@
-import { Repository, QueryFailedError, In, IsNull, Not } from 'typeorm'
+import { Repository, QueryFailedError, In } from 'typeorm'
 import {
     CreateNewProductRequest,
     CreateNewProductResponse,
@@ -86,105 +86,97 @@ export class ProductService {
             })
         }
 
-        try {
-            if (productsParams.sourceWeb === 'INTERNAL') {
-                if (status) {
-                    query.andWhere('product.status = :status', {
-                        status: status,
-                    })
-                }
-
-                const { page = 1 } = productsParams
-                const skip = (page - 1) * limit
-
-                const [products, totalProducts] = await query
-                    .skip(skip)
-                    .take(limit)
-                    .withDeleted()
-                    .getManyAndCount()
-
-                const totalPages = Math.ceil(totalProducts / limit)
-                const mappedProduct = mappedProductResponse(products)
-
-                return {
-                    products: mappedProduct,
-                    totalProducts,
-                    totalPages,
-                    currentPage: page,
-                    hasNextPage: page < totalPages,
-                    hasPreviousPage: page > totalPages,
-                }
-            } else if (productsParams.sourceWeb === 'USER') {
-                const { cursor } = productsParams
-
-                if (cursor) {
-                    const [cursorDate, cursorId] = cursor.split('_')
-                    query.andWhere(
-                        '(product.createdAt < :cursorDate OR product.createdAt = :cursorDate',
-                        { cursorDate, cursorId }
-                    )
-                }
-
-                query.take(limit + 1)
-
-                const products = await query.getMany()
-                const hasNextPage = products.length > limit
-
-                const items = hasNextPage ? products.slice(0, limit) : products
-
-                const finalProduct = mappedProductResponse(items)
-
-                const nextCursor = hasNextPage
-                    ? `${items[items.length - 1].createdAt.toISOString()}_${items[items.length - 1].id}`
-                    : null
-
-                return {
-                    products: finalProduct,
-                    nextCursor,
-                    hasNextPage,
-                }
-            } else {
-                throw new ProductError('Invalid Web Source', 400)
+        if (productsParams.sourceWeb === 'INTERNAL') {
+            if (status) {
+                query.andWhere('product.status = :status', {
+                    status: status,
+                })
             }
-        } catch (error) {
-            throw error
+
+            const { page = 1 } = productsParams
+            const skip = (page - 1) * limit
+
+            const [products, totalProducts] = await query
+                .skip(skip)
+                .take(limit)
+                .withDeleted()
+                .getManyAndCount()
+
+            const totalPages = Math.ceil(totalProducts / limit)
+            const mappedProduct = mappedProductResponse(products)
+
+            return {
+                products: mappedProduct,
+                totalProducts,
+                totalPages,
+                currentPage: page,
+                hasNextPage: page < totalPages,
+                hasPreviousPage: page > totalPages,
+            }
+        } else if (productsParams.sourceWeb === 'USER') {
+            const { cursor } = productsParams
+
+            if (cursor) {
+                const [cursorDate, cursorId] = cursor.split('_')
+                query.andWhere(
+                    '(product.createdAt < :cursorDate OR product.createdAt = :cursorDate',
+                    { cursorDate, cursorId }
+                )
+            }
+
+            query.take(limit + 1)
+
+            const products = await query.getMany()
+            const hasNextPage = products.length > limit
+
+            const items = hasNextPage ? products.slice(0, limit) : products
+
+            const finalProduct = mappedProductResponse(items)
+
+            const nextCursor = hasNextPage
+                ? `${items[items.length - 1].createdAt.toISOString()}_${items[items.length - 1].id}`
+                : null
+
+            return {
+                products: finalProduct,
+                nextCursor,
+                hasNextPage,
+            }
+        } else {
+            throw new ProductError('Invalid Web Source', 400)
         }
     }
 
     async getProductsById(slug: string): Promise<ProductResponse> {
-        try {
-            const product = await this.productRepository
-                .createQueryBuilder('product')
-                .leftJoinAndMapMany(
-                    'product.images',
-                    Image,
-                    'image',
-                    'image.entityType = :imageType AND image.entityId = product.id AND image.status = :imageStatus',
-                    {}
-                )
-                .setParameters({
-                    imageType: TypeImageRequest.PRODUCTS, // Use enum, not string
-                    imageStatus: StatusImage.ACTIVE,
-                })
-                .where('product.slug = :slug', { slug })
-                .getOne()
+        const product = await this.productRepository
+            .createQueryBuilder('product')
+            .leftJoinAndMapMany(
+                'product.images',
+                Image,
+                'image',
+                'image.entityType = :imageType AND image.entityId = product.id AND image.status = :imageStatus',
+                {}
+            )
+            .setParameters({
+                imageType: TypeImageRequest.PRODUCTS, // Use enum, not string
+                imageStatus: StatusImage.ACTIVE,
+            })
+            .where('product.slug = :slug', { slug })
+            .getOne()
 
-            if (!product) throw ProductError.NotFound(slug)
+        if (!product) throw ProductError.NotFound(slug)
 
-            const images = mappedImageReponse(product?.images || [])
+        const images = mappedImageReponse(product?.images || [])
 
-            const finalProduct: ProductResponse = {
-                id: product.id,
-                name: product.name,
-                price: product.price,
-                slug: product.slug,
-                images,
-            }
-
-            return finalProduct
-        } catch (error) {
-            throw error
+        const finalProduct: ProductResponse = {
+            id: product.id,
+            name: product.name,
+            price: product.price,
+            slug: product.slug,
+            images,
         }
+
+        return finalProduct
     }
 
     async createNewProduct(
@@ -218,35 +210,31 @@ export class ProductService {
     }
 
     async deleteProduct(productId: string): Promise<DeleteProductResponse> {
-        try {
-            return await AppDataSource.transaction(async (manager) => {
-                const product = await manager.findOne(Product, {
-                    where: {
-                        id: productId,
-                    },
-                })
-                if (!product) {
-                    throw ProductError.NotFound(productId)
-                }
-
-                await manager.softDelete(Product, { id: productId })
-                await manager.update(
-                    Product,
-                    { id: productId },
-                    {
-                        status: Status.DELETED,
-                    }
-                )
-                await manager.softDelete(Image, {
-                    entityType: 'products',
-                    entityId: productId,
-                })
-
-                return { id: productId, deleted: true }
+        return await AppDataSource.transaction(async (manager) => {
+            const product = await manager.findOne(Product, {
+                where: {
+                    id: productId,
+                },
             })
-        } catch (error) {
-            throw error
-        }
+            if (!product) {
+                throw ProductError.NotFound(productId)
+            }
+
+            await manager.softDelete(Product, { id: productId })
+            await manager.update(
+                Product,
+                { id: productId },
+                {
+                    status: Status.DELETED,
+                }
+            )
+            await manager.softDelete(Image, {
+                entityType: 'products',
+                entityId: productId,
+            })
+
+            return { id: productId, deleted: true }
+        })
     }
 
     async updateProduct(

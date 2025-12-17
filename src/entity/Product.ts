@@ -1,5 +1,4 @@
 import {
-    AfterInsert,
     BeforeInsert,
     BeforeUpdate,
     Column,
@@ -8,7 +7,6 @@ import {
     Entity,
     Index,
     ManyToOne,
-    OneToMany,
     PrimaryGeneratedColumn,
     Unique,
     UpdateDateColumn,

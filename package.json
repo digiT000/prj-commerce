@@ -5,7 +5,8 @@
     "scripts": {
         "dev": "node --env-file=src/config/env/.env.local --watch --import tsx src/index.ts",
         "start": "node dist/index.js",
-        "build": "tsc"
+        "build": "tsc",
+        "lint": "npx eslint"
     },
     "keywords": [],
     "author": "",
@@ -24,13 +25,20 @@
         "uuid": "^13.0.0"
     },
     "devDependencies": {
+        "@eslint/js": "^9.39.2",
         "@tsconfig/node22": "^22.0.5",
         "@types/bcrypt": "^6.0.0",
         "@types/express": "^5.0.5",
         "@types/jsonwebtoken": "^9.0.10",
         "@types/node": "^24.10.1",
+        "@typescript-eslint/eslint-plugin": "^8.50.0",
+        "@typescript-eslint/parser": "^8.50.0",
+        "eslint": "^9.39.2",
+        "globals": "^16.5.0",
+        "jiti": "^2.6.1",
         "prettier": "^3.7.3",
         "tsx": "^4.20.6",
-        "typescript": "^5.9.3"
+        "typescript": "^5.9.3",
+        "typescript-eslint": "^8.50.0"
     }
 }
