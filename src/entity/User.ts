@@ -33,6 +33,9 @@ export class User {
     @Column({ type: 'varchar', length: 500, nullable: true, select: false }) // ✅ Hide by default
     refreshToken: string | null
 
+    @Column({ type: 'bigint', nullable: true })
+    expiryTimeRefreshToken: number | null
+
     @Column({ type: 'enum', enum: UserRole, default: UserRole.USER })
     role: UserRole
 

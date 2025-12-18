@@ -29,7 +29,7 @@ export class TokenUtils {
 
     // Generate refresh token
     static generateRefreshToken(): string {
-        return crypto.randomBytes(64).toString('hex')
+        return crypto.randomBytes(20).toString('hex')
     }
 
     static generatePairToken(payload: JwtPayload): TokenPair {
@@ -37,6 +37,15 @@ export class TokenUtils {
         const refreshToken = this.generateRefreshToken()
 
         return { accessToken, refreshToken }
+    }
+
+    static isRefreshTokenExpiry(expiryTime: Date | null): boolean {
+        if (!expiryTime) {
+            return true // ✅ No expiry time = expired
+        }
+
+        const now = new Date()
+        return now > expiryTime // ✅ If now is past expiry = expired
     }
 
     static async validateAccessToken(token: string) {

@@ -10,10 +10,12 @@ import {
 import { handleSourceWebHeader } from './Middleware/headers.middleware'
 import { initCloudinary } from './config/cloudinary'
 import { errorHandle } from './Middleware/errorHandler.middleware'
+import cookieParser from 'cookie-parser'
 
 const app = express()
 
 app.use(express.json())
+app.use(cookieParser())
 
 // Initiate cloudinary configuration
 initCloudinary()

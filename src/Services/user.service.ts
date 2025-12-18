@@ -52,6 +52,7 @@ export class UserService {
         user.refreshToken = refreshToken
         await this.userRepository.update(user.id, {
             refreshToken: refreshToken,
+            expiryTimeRefreshToken: Date.now() + 30 * 24 * 60 * 60 * 1000,
             lastLoginAt: new Date(),
         })
         return {
@@ -120,6 +121,41 @@ export class UserService {
 
         await this.userRepository.update(userId, {
             refreshToken: null,
+        })
+    }
+
+    async refreshToken(userId: string, oldRefreshToken: string) {
+        const user = await this.userRepository
+            .createQueryBuilder('user')
+            .where({
+                id: userId,
+            })
+            .addSelect('user.refreshToken')
+            .getOne()
+        if (!user) {
+            throw UserError.NotFound(userId)
+        }
+
+        if (user.refreshToken !== oldRefreshToken) {
+            throw UserError.InvalidToken()
+        }
+
+        if (
+            TokenUtils.isRefreshTokenExpiry(
+                new Date(user.expiryTimeRefreshToken || '')
+            )
+        ) {
+            await this.userRepository.update(userId, {
+                refreshToken: null,
+                expiryTimeRefreshToken: null,
+            })
+            throw UserError.TokenIsExpired()
+        }
+
+        return TokenUtils.generateAccessToken({
+            email: user.email,
+            userId: user.id,
+            role: user.role,
         })
     }
 

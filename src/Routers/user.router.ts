@@ -12,5 +12,10 @@ userRouter.put(
     authenticateUser,
     userController.logout.bind(userController)
 )
+userRouter.put(
+    '/v1/user/refresh-token',
+    authenticateUser,
+    userController.refreshToken.bind(userController)
+)
 
 export default userRouter

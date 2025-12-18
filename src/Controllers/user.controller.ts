@@ -30,6 +30,13 @@ export class UserController {
             loginData as LoginRequest
         )
 
+        res.cookie('refreshToken', userLogin.refreshToken, {
+            httpOnly: true,
+            secure: true,
+            sameSite: 'strict',
+            maxAge: 30 * 24 * 60 * 60 * 1000,
+        })
+
         res.status(200).json({
             status: 200,
             message: 'Login Successfull',
@@ -76,6 +83,25 @@ export class UserController {
         res.status(200).json({
             status: 200,
             message: 'Logout success',
+        })
+    })
+
+    refreshToken = asyncHandler(async (req: Request, res: Response) => {
+        const { refreshToken } = req.cookies
+        const user = req.user as JwtPayload
+
+        if (!refreshToken) {
+            throw UserError.TokenNotProvided()
+        }
+        const newTokens = await this.userService.refreshToken(
+            user.userId,
+            refreshToken
+        )
+
+        res.status(200).json({
+            status: 200,
+            message: 'Token refreshed successfully',
+            data: newTokens,
         })
     })
 }
