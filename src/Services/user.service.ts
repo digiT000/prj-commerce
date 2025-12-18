@@ -158,8 +158,4 @@ export class UserService {
             role: user.role,
         })
     }
-
-    // Verified Email
-
-    // Send Verification
 }

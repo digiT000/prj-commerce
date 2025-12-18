@@ -1,6 +1,7 @@
 import express from 'express'
 import { UserController } from '../Controllers/user.controller'
 import { authenticateUser } from '../Middleware/authenticateUser.middleware'
+import { limitter } from '../config/rateLimitter'
 
 const userRouter = express()
 const userController = new UserController()
@@ -14,6 +15,7 @@ userRouter.put(
 )
 userRouter.put(
     '/v1/user/refresh-token',
+    limitter,
     authenticateUser,
     userController.refreshToken.bind(userController)
 )
